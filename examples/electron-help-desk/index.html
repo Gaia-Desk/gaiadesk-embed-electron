@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'" />
+    <title>Acme Desk</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="card" class="swatch red"><span>Card 4242 4242 4242 4242</span></div>
+    <div id="blue" class="swatch blue"></div>
+    <button id="buy" type="button">Buy</button>
+    <input id="token" type="text" placeholder="gdemb_… (from your backend)" spellcheck="false" autocomplete="off" />
+    <button id="get-help" type="button">Get help</button>
+    <div id="clicks">Buy clicked 0 times</div>
+    <div id="status">Press Get help to share this window with Acme support.</div>
+    <script src="dist/renderer.js"></script>
+  </body>
+</html>

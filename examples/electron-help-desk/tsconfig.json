@@ -1,0 +1,22 @@
+{
+  // One program for the three parts: main.ts and preload.ts (CommonJS for
+  // Electron's main process and its sandboxed preload) and renderer.ts (a
+  // plain script for the page: no imports, so nothing module-shaped is
+  // emitted). The bridge between them is typed in bridge.d.ts.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "CommonJS",
+    "moduleResolution": "Node10",
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": "dist",
+    "sourceMap": false,
+    "strict": true,
+    "esModuleInterop": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}

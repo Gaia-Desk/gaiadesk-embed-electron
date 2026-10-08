@@ -1,0 +1,20 @@
+{
+  "name": "electron-help-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Acme Desk: an Electron app with a \"Get help\" button, built on @gaiadesk/embed-native.",
+  "license": "MIT",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "npm run build && electron ."
+  },
+  "dependencies": {
+    "@gaiadesk/embed-native": "file:../.."
+  },
+  "devDependencies": {
+    "electron": "44.4.4",
+    "typescript": "^5.6.0"
+  }
+}

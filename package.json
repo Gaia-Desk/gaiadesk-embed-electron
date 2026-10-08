@@ -1,0 +1,44 @@
+{
+  "name": "@gaiadesk/embed-native",
+  "version": "0.1.0",
+  "description": "A \"Get help\" button for your Electron or Node desktop app: your customer agrees, and your support team sees the app's window in the GaiaDesk console.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "LICENSE-BINARY",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:test": "tsc -p tsconfig.test.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "npm run build && npm run build:test && node --test dist-test/load.test.js dist-test/config.test.js dist-test/events.test.js dist-test/facade.test.js dist-test/electron.test.js dist-test/native.test.js",
+    "prepack": "npm run build"
+  },
+  "optionalDependencies": {
+    "@gaiadesk/embed-native-darwin-arm64": "0.1.0",
+    "@gaiadesk/embed-native-darwin-x64": "0.1.0",
+    "@gaiadesk/embed-native-linux-x64-gnu": "0.1.0",
+    "@gaiadesk/embed-native-win32-x64-msvc": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "typescript": "^5.6.0"
+  },
+  "homepage": "https://gaiadesk.net/docs/embed",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gaia-Desk/gaiadesk-embed-electron.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": ["gaiadesk", "support", "help-desk", "screen-sharing", "cobrowse", "electron", "native", "napi"]
+}

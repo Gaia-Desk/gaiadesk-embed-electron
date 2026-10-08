@@ -1,0 +1,11 @@
+{
+  // The tests, compiled to dist-test/. They import the BUILT package
+  // (../dist/index.js): `npm test` builds it first.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "test",
+    "outDir": "dist-test",
+    "declaration": false
+  },
+  "include": ["test"]
+}
