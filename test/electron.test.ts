@@ -30,8 +30,9 @@ test('Windows: moved by the frame offset, then times the scale factor', () => {
   assert.deepEqual(frameSizeOf(win, 1.5, 'win32'), [984, 658.5]);
 });
 
-test('Linux: DIPs, like macOS', () => {
-  assert.deepEqual(maskRectsFromContent(win, [card], 2, 'linux'), [{ x: 48, y: 91, w: 200, h: 120 }]);
+test('Linux: X11 pixels, times the scale factor like Windows', () => {
+  assert.deepEqual(maskRectsFromContent(win, [card], 1, 'linux'), [{ x: 48, y: 91, w: 200, h: 120 }]);
+  assert.deepEqual(maskRectsFromContent(win, [card], 2, 'linux'), [{ x: 96, y: 182, w: 400, h: 240 }]);
 });
 
 test('several rects, none, and a nonsense scale factor', () => {
@@ -41,4 +42,5 @@ test('several rects, none, and a nonsense scale factor', () => {
   assert.equal(unitsPerDip(NaN, 'win32'), 1);
   assert.equal(unitsPerDip(1.25, 'win32'), 1.25);
   assert.equal(unitsPerDip(2, 'darwin'), 1);
+  assert.equal(unitsPerDip(2, 'linux'), 2);
 });

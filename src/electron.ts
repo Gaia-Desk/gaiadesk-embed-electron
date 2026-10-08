@@ -5,7 +5,8 @@
 // window's FRAME (title bar and borders included), in the units the library
 // uses: points on macOS (= Electron's DIPs), and on Windows the physical
 // pixels of GetWindowRect (Electron is per-monitor DPI aware, so DIPs times
-// the display's scale factor). On Linux the rects are passed in DIPs.
+// the display's scale factor), and on Linux X11's pixels (DIPs times the
+// scale factor too: X11 coordinates are unscaled).
 
 /** A rect as the library takes it. */
 export interface Rect {
@@ -49,9 +50,9 @@ export function windowIdOf(win: MediaSourceWindow): number {
   return id;
 }
 
-/** The units multiplier for this platform: the scale factor on Windows, else 1. */
+/** The units multiplier for this platform: the scale factor on Windows and Linux, 1 on macOS. */
 export function unitsPerDip(scaleFactor: number, platform: string = process.platform): number {
-  if (platform !== 'win32') return 1;
+  if (platform === 'darwin') return 1;
   return Number.isFinite(scaleFactor) && scaleFactor > 0 ? scaleFactor : 1;
 }
 
@@ -61,7 +62,7 @@ export function unitsPerDip(scaleFactor: number, platform: string = process.plat
  * page's zoom factor: `el.getBoundingClientRect()` times
  * `webFrame.getZoomFactor()` in the renderer. They are moved by the offset of
  * the content inside the frame (`getContentBounds()` minus `getBounds()`), and
- * on Windows only multiplied by `scaleFactor` (the window's display's
+ * on Windows and Linux multiplied by `scaleFactor` (the window's display's
  * `screen.getDisplayMatching(win.getBounds()).scaleFactor`).
  *
  * Call it again (and `setMaskedRects`) when the layout, the window's size or
