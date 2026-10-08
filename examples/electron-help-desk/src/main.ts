@@ -128,12 +128,13 @@ async function getHelp(fieldToken: string): Promise<void> {
           company: 'Acme',
           windowId: windowIdOf(w),
           guided,
+          // The card's mask goes in the start options: it covers the very first frame.
+          ...(layout ? { masks: frameRects(w, [layout.card]) } : {}),
           ...(env.GAIADESK_SERVER ? { server: env.GAIADESK_SERVER } : {}),
         },
         { consentGranted: true },
         onEvent,
       );
-      applyMasks();
     } catch (e) {
       const err = EmbedError.from(e);
       setStatus(`Could not start: ${err.message}`);

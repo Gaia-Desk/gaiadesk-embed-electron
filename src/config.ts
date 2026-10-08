@@ -1,6 +1,8 @@
 // EmbedOptions → the JSON `gd_embed_start` takes. Pure. The library checks
 // every value itself (and refuses with a code); this only spells it right.
 
+import type { Rect } from './electron';
+
 /** What is shared. */
 export type Capture = 'window' | 'app' | 'screen';
 
@@ -26,6 +28,13 @@ export interface EmbedOptions {
   guided?: boolean;
   /** Frames per second, 1 to 30. Default 15. */
   fps?: number;
+  /**
+   * Regions painted out from the very first frame (same units as
+   * `setMaskedRects`; `maskRectsFromContent` makes them). Pass the ones you
+   * already know here: an agent can join straight away, and only start-time
+   * masks are guaranteed to cover the first frame.
+   */
+  masks?: readonly Rect[];
 }
 
 /** Your user's answer to a consent dialog. */
@@ -35,8 +44,8 @@ export interface Consent {
 
 /**
  * The config JSON: snake_case keys, `capture` and `guided` always present
- * (defaults `"window"` and `false`), `server`/`window_id`/`fps` only when
- * set, and `consent_granted` true only when the answer is literally `true`.
+ * (defaults `"window"` and `false`), `server`/`window_id`/`fps`/`masks` only
+ * when set, and `consent_granted` true only when the answer is literally `true`.
  */
 export function configJson(options: EmbedOptions, consent: Consent | undefined): string {
   const o: Record<string, unknown> = {
@@ -49,5 +58,6 @@ export function configJson(options: EmbedOptions, consent: Consent | undefined):
   if (options.server !== undefined) o.server = options.server;
   if (options.windowId !== undefined) o.window_id = options.windowId;
   if (options.fps !== undefined) o.fps = options.fps;
+  if (options.masks !== undefined && options.masks.length > 0) o.masks = options.masks.map((r) => ({ x: r.x, y: r.y, w: r.w, h: r.h }));
   return JSON.stringify(o);
 }

@@ -32,7 +32,13 @@ licence.
    into it statically or dynamically, or shipped beside it — unmodified, with
    this licence included in your application's notices; linking it into your
    application does not by itself modify the Binary or create a derivative
-   work of it for section 3(b).
+   work of it for section 3(b). Your application's users may install and run
+   the embed library as part of your application, under your own terms for
+   your application, provided those terms grant them no right in the Binary
+   that this licence does not grant you, and do not permit them to separate
+   the Binary from your application and use or redistribute it on its own.
+   You are responsible for your users' use of the Binary through your
+   application.
 
 3. Restrictions. You may not:
    (a) reverse engineer, decompile or disassemble the Binary, or otherwise try

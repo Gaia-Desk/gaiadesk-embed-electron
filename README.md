@@ -85,7 +85,9 @@ button, a token field and Get help.
 
 ## Masking
 
-Mask rects are relative to the **top-left corner of the shared window's frame** (title bar
+Pass the regions you already know as `masks` in the start options: an agent can join straight
+away, and only start-time masks are guaranteed to cover the first frame. `setMaskedRects`
+replaces them afterwards. Mask rects are relative to the **top-left corner of the shared window's frame** (title bar
 included): points on macOS, physical pixels (`GetWindowRect`) on Windows. From a web page, measure
 in the renderer and convert in the main process:
 

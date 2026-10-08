@@ -11,13 +11,13 @@ const parse = (s: string): Record<string, unknown> => JSON.parse(s) as Record<st
 test('defaults: window capture, not guided; optional keys omitted', () => {
   const o = parse(configJson({ embedToken: TOKEN, company: 'Acme' }, { consentGranted: true }));
   assert.deepEqual(o, { embed_token: TOKEN, consent_granted: true, company: 'Acme', capture: 'window', guided: false });
-  assert.ok(!('server' in o) && !('window_id' in o) && !('fps' in o));
+  assert.ok(!('server' in o) && !('window_id' in o) && !('fps' in o) && !('masks' in o));
 });
 
 test('every option, in snake_case', () => {
   const o = parse(
     configJson(
-      { embedToken: TOKEN, company: 'Acme', server: 'https://gd.example', capture: 'screen', windowId: 4242, guided: true, fps: 30 },
+      { embedToken: TOKEN, company: 'Acme', server: 'https://gd.example', capture: 'screen', windowId: 4242, guided: true, fps: 30, masks: [{ x: 10, y: 20, w: 100, h: 30 }] },
       { consentGranted: true },
     ),
   );
@@ -30,6 +30,7 @@ test('every option, in snake_case', () => {
     server: 'https://gd.example',
     window_id: 4242,
     fps: 30,
+    masks: [{ x: 10, y: 20, w: 100, h: 30 }],
   });
 });
 
