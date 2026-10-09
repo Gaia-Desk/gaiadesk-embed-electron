@@ -1,9 +1,15 @@
 # @gaiadesk/embed-native
 
-A **"Get help" button for your Electron (or Node) desktop app**. Your customer clicks it and
-agrees; your app's window is shared with **your** support team, who see it in the GaiaDesk
-console's Support page and, if you allow it, guide it: click and type **inside your app only**,
-while it is in front.
+[![CI](https://github.com/Gaia-Desk/gaiadesk-embed-electron/actions/workflows/ci.yml/badge.svg)](https://github.com/Gaia-Desk/gaiadesk-embed-electron/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@gaiadesk/embed-native)](https://www.npmjs.com/package/@gaiadesk/embed-native)
+[![Release](https://img.shields.io/github/v/release/Gaia-Desk/gaiadesk-embed-electron)](https://github.com/Gaia-Desk/gaiadesk-embed-electron/releases/latest)
+[![License: MIT + binary licence](https://img.shields.io/badge/license-MIT%20%2B%20binary%20licence-blue)](#licences)
+
+A **"Get help" button for your Electron (or Node) desktop app**: in-app remote support and a
+screen sharing SDK for Electron, for customer support with optional guided control. Your customer
+clicks it and agrees; your app's window is shared with **your** support team, who see it in the
+GaiaDesk console's Support page and, if you allow it, guide it: click and type **inside your app
+only**, while it is in front.
 
 - TypeScript, typed events, no runtime dependencies besides the prebuilt native library for your
   platform.
@@ -200,6 +206,13 @@ cd examples/electron-help-desk && npm install && GAIADESK_EMBED_TOKEN=gdemb_… 
 It prints one JSON line per event; `GAIADESK_DEMO_AUTOSTART=1`, `GAIADESK_DEMO_GUIDED=1`,
 `GAIADESK_SERVER` and (for automated tests only) `GAIADESK_DEMO_TEST_CONSENT=1` drive it, and
 stdin `stop` / `pause` / `resume` control the session.
+
+## Links
+
+- npm: [@gaiadesk/embed-native](https://www.npmjs.com/package/@gaiadesk/embed-native)
+- Guide: [Embedding GaiaDesk](https://gaiadesk.net/docs/embedding-gaiadesk) on gaiadesk.net
+- Embed SDKs: [Web](https://github.com/Gaia-Desk/gaiadesk-embed) · [Electron](https://github.com/Gaia-Desk/gaiadesk-embed-electron) · [macOS (Swift)](https://github.com/Gaia-Desk/gaiadesk-embed-swift) · [C/C++ and Qt](https://github.com/Gaia-Desk/gaiadesk-embed-cpp) · [.NET](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet) · [iOS](https://github.com/Gaia-Desk/gaiadesk-embed-ios) · [Android](https://github.com/Gaia-Desk/gaiadesk-embed-android) · [React Native](https://github.com/Gaia-Desk/gaiadesk-embed-react-native) · [Flutter](https://github.com/Gaia-Desk/gaiadesk-embed-flutter)
+- [Changelog](CHANGELOG.md) · [Security policy](https://github.com/Gaia-Desk/.github/blob/main/SECURITY.md)
 
 ## Licences
 

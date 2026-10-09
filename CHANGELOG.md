@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0
 
 The first release: GaiaDesk's built-in help desk for Electron and Node desktop apps, over the
 native library libgaiadesk_embed.
