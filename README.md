@@ -89,6 +89,28 @@ button, a token field and Get help.
 `false`, or `null` where the platform has no native dialog (Linux): show your own, e.g. Electron's
 `dialog.showMessageBox`. Say who will see what, and whether they can act.
 
+## Branding
+
+Your customer sees your brand, not ours: `company` on the consent dialog and the indicator, plus
+(libgaiadesk_embed 0.2.0) your colour and logo.
+
+```ts
+import { readFileSync } from "node:fs";
+
+const brand = {
+  brandColor: "#0f766e",                                        // "#RRGGBB": accent, stripe, Stop button
+  logoPngBase64: readFileSync("logo.png").toString("base64"),   // a PNG, at most 256 KiB
+};
+const agreed = GaiaDeskEmbed.requestConsent({ company: "Acme", capture: "window", ...brand });
+// … then
+GaiaDeskEmbed.start({ embedToken, company: "Acme", windowId: windowIdOf(win), ...brand }, { consentGranted: agreed === true });
+```
+
+A colour that is not `#RRGGBB` throws `EmbedError` (`bad_config`) before anything native runs; a
+logo the library refuses (not a PNG, over 256 KiB) throws `bad_config` from `requestConsent` or
+`start`, never reads as a decline. Linux has no native consent dialog (`null`): show your own, in
+your look.
+
 ## Masking
 
 Pass the regions you already know as `masks` in the start options: an agent can join straight
@@ -153,6 +175,7 @@ Stop ends everything; you get `ended` with reason `stopped`.
 | `help.setPaused(paused)` | pause or resume guided input |
 | `help.ended` | a promise of the end reason, resolved exactly once |
 | `GaiaDeskEmbed.requestConsent(company, capture?, guided?)` | `true` / `false`, or `null` with no native dialog |
+| `GaiaDeskEmbed.requestConsent({ company, capture?, guided?, brandColor?, logoPngBase64? })` | the same dialog in your look (see Branding) |
 | `GaiaDeskEmbed.buildInfo()` | `{ version, testSource, codec, os, arch }` of the native library |
 | `windowIdOf(win)` | a BrowserWindow's CGWindowID (macOS) / HWND (Windows), for `windowId` |
 | `maskRectsFromContent(win, rects, scaleFactor)` | page rects → mask rects (see Masking) |
@@ -166,6 +189,9 @@ Stop ends everything; you get `ended` with reason `stopped`.
 | `windowId` | the window to share (`windowIdOf(win)`); default: your app's frontmost |
 | `guided` | allow guided input (default `false`; see Guided mode) |
 | `fps` | 1 to 30 (default 15) |
+| `masks` | rects painted out from the first frame (see Masking) |
+| `brandColor` | `"#RRGGBB"`, the indicator's accent (see Branding) |
+| `logoPngBase64` | a PNG (at most 256 KiB) as base64, shown small on the indicator |
 
 | Event | |
 |---|---|

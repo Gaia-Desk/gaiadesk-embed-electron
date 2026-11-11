@@ -2,6 +2,7 @@
 // every value itself (and refuses with a code); this only spells it right.
 
 import type { Rect } from './electron';
+import { EmbedError } from './errors';
 
 /** What is shared. */
 export type Capture = 'window' | 'app' | 'screen';
@@ -35,6 +36,31 @@ export interface EmbedOptions {
    * masks are guaranteed to cover the first frame.
    */
   masks?: readonly Rect[];
+  /**
+   * Your brand colour, `"#RRGGBB"`: the indicator's stripe and Stop button.
+   * Default: the library's own. Needs libgaiadesk_embed 0.2.0.
+   */
+  brandColor?: string;
+  /**
+   * Your logo, a PNG (at most 256 KiB) as base64, shown small on the
+   * indicator, e.g. `fs.readFileSync('logo.png').toString('base64')`.
+   * Needs libgaiadesk_embed 0.2.0.
+   */
+  logoPngBase64?: string;
+}
+
+/** The consent dialog's question, in your look (`requestConsent(options)`). */
+export interface ConsentOptions {
+  /** Your company's name on the dialog. */
+  company: string;
+  /** Default `"window"`. */
+  capture?: Capture;
+  /** Say the agent may click and type. Default false. */
+  guided?: boolean;
+  /** `"#RRGGBB"`: the dialog's accent. Default: the platform's own. */
+  brandColor?: string;
+  /** A PNG (at most 256 KiB) as base64, shown small on the dialog. */
+  logoPngBase64?: string;
 }
 
 /** Your user's answer to a consent dialog. */
@@ -59,5 +85,28 @@ export function configJson(options: EmbedOptions, consent: Consent | undefined):
   if (options.windowId !== undefined) o.window_id = options.windowId;
   if (options.fps !== undefined) o.fps = options.fps;
   if (options.masks !== undefined && options.masks.length > 0) o.masks = options.masks.map((r) => ({ x: r.x, y: r.y, w: r.w, h: r.h }));
+  addBrand(o, options);
   return JSON.stringify(o);
+}
+
+/**
+ * The JSON `gd_embed_show_consent_ex` takes: `capture` and `guided` always
+ * present, `company` and the brand keys only when set.
+ *
+ * @throws EmbedError `bad_config` for a colour that is not `"#RRGGBB"`.
+ */
+export function consentJson(options: ConsentOptions): string {
+  const o: Record<string, unknown> = { capture: options.capture ?? 'window', guided: options.guided === true };
+  if (options.company) o.company = options.company;
+  addBrand(o, options);
+  return JSON.stringify(o);
+}
+
+// The library refuses a bad colour too (bad_config); checking here names the field before any native call.
+function addBrand(o: Record<string, unknown>, b: { brandColor?: string; logoPngBase64?: string }): void {
+  if (b.brandColor !== undefined) {
+    if (!/^#[0-9A-Fa-f]{6}$/.test(b.brandColor)) throw new EmbedError('bad_config', `brandColor must be "#RRGGBB" (not ${JSON.stringify(b.brandColor)})`);
+    o.brand_color = b.brandColor;
+  }
+  if (b.logoPngBase64) o.logo_png_base64 = b.logoPngBase64;
 }

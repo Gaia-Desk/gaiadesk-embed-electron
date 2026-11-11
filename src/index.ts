@@ -11,8 +11,8 @@
 //
 // Electron: use it from the MAIN process.
 
-import { configJson } from './config';
-import type { Capture, Consent, EmbedOptions } from './config';
+import { configJson, consentJson } from './config';
+import type { Capture, Consent, ConsentOptions, EmbedOptions } from './config';
 import { EmbedError } from './errors';
 import { parseEvent } from './events';
 import type { EmbedEvent, EndReason } from './events';
@@ -20,8 +20,8 @@ import { binding } from './load';
 import type { NativeEmbedHandle } from './native';
 import type { Rect } from './electron';
 
-export { configJson } from './config';
-export type { Capture, Consent, EmbedOptions } from './config';
+export { configJson, consentJson } from './config';
+export type { Capture, Consent, ConsentOptions, EmbedOptions } from './config';
 export { EmbedError } from './errors';
 export { parseEvent } from './events';
 export type { EmbedEvent, EmbedState, EndReason, SessionMode } from './events';
@@ -84,9 +84,27 @@ export class GaiaDeskEmbed {
    * thread, which Electron's main process is). Returns whether your user
    * agreed, or `null` when this platform has no native dialog (Linux): show
    * your own, e.g. Electron's `dialog.showMessageBox`.
+   *
+   * Pass `ConsentOptions` for the dialog in your look (`brandColor`,
+   * `logoPngBase64`; libgaiadesk_embed 0.2.0).
+   *
+   * @throws EmbedError `bad_config` for a colour or logo that is refused
+   *   (never read as a decline), `wrong_thread`.
    */
-  static requestConsent(company: string, capture: Capture = 'window', guided = false): boolean | null {
-    const rc = binding().showConsent(company, capture, guided);
+  static requestConsent(options: ConsentOptions): boolean | null;
+  static requestConsent(company: string, capture?: Capture, guided?: boolean): boolean | null;
+  static requestConsent(companyOrOptions: string | ConsentOptions, capture: Capture = 'window', guided = false): boolean | null {
+    const o: ConsentOptions = typeof companyOrOptions === 'string' ? { company: companyOrOptions, capture, guided } : companyOrOptions;
+    const branded = o.brandColor !== undefined || !!o.logoPngBase64;
+    const json = consentJson(o); // validates the colour first
+    const b = binding();
+    let rc: number;
+    try {
+      // shortcut: an addon without showConsentEx shows the plain dialog (brand ignored); drop the fallback once every addon has it.
+      rc = branded && b.showConsentEx ? b.showConsentEx(json) : b.showConsent(o.company, o.capture ?? 'window', o.guided === true);
+    } catch (e) {
+      throw EmbedError.from(e);
+    }
     if (rc === 1) return true;
     if (rc === 0) return false;
     if (rc === -2) throw new EmbedError('wrong_thread', 'the consent dialog must be shown from the main thread');

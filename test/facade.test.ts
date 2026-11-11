@@ -50,7 +50,7 @@ function fake(): Fake {
       }
     },
     binding: {
-      buildInfo: () => '{"version":"0.1.0","test_source":false,"codec":"h264","os":"macos","arch":"aarch64"}',
+      buildInfo: () => '{"version":"0.2.0","test_source":false,"codec":"h264","os":"macos","arch":"aarch64"}',
       showConsent: (...args: unknown[]) => {
         f.consent.args.push(args);
         return f.consent.rc;
@@ -212,7 +212,42 @@ test('requestConsent maps the dialog result', () => {
   assert.deepEqual(f.consent.args[1], ['Acme', 'app', true]);
 });
 
+test('requestConsent(options): the branded dialog when the addon has it', () => {
+  const sent: string[] = [];
+  f.binding.showConsentEx = (json) => {
+    sent.push(json);
+    if (json.includes('"logo_png_base64":"GIF"')) throw new Error('bad_config: logo_png_base64 must be a PNG image');
+    return f.consent.rc;
+  };
+  f.consent.rc = 1;
+  assert.equal(GaiaDeskEmbed.requestConsent({ company: 'Acme', brandColor: '#0f766e' }), true);
+  assert.deepEqual(JSON.parse(sent[0]), { capture: 'window', guided: false, company: 'Acme', brand_color: '#0f766e' });
+  // A refused logo is an error, never a decline.
+  assert.throws(() => GaiaDeskEmbed.requestConsent({ company: 'Acme', logoPngBase64: 'GIF' }), { name: 'EmbedError', code: 'bad_config' });
+  // A bad colour never reaches the addon.
+  assert.throws(() => GaiaDeskEmbed.requestConsent({ company: 'Acme', brandColor: 'teal' }), { code: 'bad_config' });
+  assert.equal(sent.length, 2);
+  // No brand: the plain dialog.
+  assert.equal(GaiaDeskEmbed.requestConsent({ company: 'Acme', capture: 'app' }), true);
+  assert.deepEqual(f.consent.args.at(-1), ['Acme', 'app', false]);
+  assert.equal(sent.length, 2);
+});
+
+test('requestConsent(options) without showConsentEx: the plain dialog', () => {
+  f.consent.rc = 0;
+  assert.equal(GaiaDeskEmbed.requestConsent({ company: 'Acme', guided: true, brandColor: '#112233' }), false);
+  assert.deepEqual(f.consent.args.at(-1), ['Acme', 'window', true]);
+});
+
+test('start passes the brand', () => {
+  GaiaDeskEmbed.start({ embedToken: TOKEN, company: 'Acme', brandColor: '#0F766E', logoPngBase64: 'iVBORw0KGgo=' }, { consentGranted: true }).stop();
+  assert.equal(f.configs[0].brand_color, '#0F766E');
+  assert.equal(f.configs[0].logo_png_base64, 'iVBORw0KGgo=');
+  assert.throws(() => GaiaDeskEmbed.start({ embedToken: TOKEN, company: 'Acme', brandColor: '#12345' }, { consentGranted: true }), { code: 'bad_config' });
+  assert.equal(f.configs.length, 1);
+});
+
 test('buildInfo is typed', () => {
-  assert.deepEqual(GaiaDeskEmbed.buildInfo(), { version: '0.1.0', testSource: false, codec: 'h264', os: 'macos', arch: 'aarch64' });
+  assert.deepEqual(GaiaDeskEmbed.buildInfo(), { version: '0.2.0', testSource: false, codec: 'h264', os: 'macos', arch: 'aarch64' });
   assert.match(GaiaDeskEmbed.buildInfoJson(), /"test_source":false/);
 });

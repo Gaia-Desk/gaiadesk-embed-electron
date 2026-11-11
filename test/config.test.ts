@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { configJson } from '../dist/index';
+import { configJson, consentJson } from '../dist/index';
 import type { Consent } from '../dist/index';
 
 const TOKEN = 'gdemb_' + 'a'.repeat(64);
@@ -46,4 +46,28 @@ test('consent is true only when literally true', () => {
 test('guided is true only when literally true', () => {
   const o = parse(configJson({ embedToken: TOKEN, company: 'Acme', guided: 'yes' as unknown as boolean }, { consentGranted: true }));
   assert.equal(o.guided, false);
+});
+
+test('brand keys only when set; a colour that is not #RRGGBB is bad_config', () => {
+  const base = { embedToken: TOKEN, company: 'Acme' };
+  const o = parse(configJson({ ...base, brandColor: '#0f766e', logoPngBase64: 'iVBORw0KGgo=' }, { consentGranted: true }));
+  assert.equal(o.brand_color, '#0f766e');
+  assert.equal(o.logo_png_base64, 'iVBORw0KGgo=');
+  assert.ok(!configJson(base, { consentGranted: true }).includes('brand_'));
+  assert.ok(!configJson({ ...base, logoPngBase64: '' }, { consentGranted: true }).includes('logo_'));
+  for (const bad of ['0f766e', '#0f766', '#0f766eff', 'teal', '#gggggg', '']) {
+    assert.throws(() => configJson({ ...base, brandColor: bad }, { consentGranted: true }), { name: 'EmbedError', code: 'bad_config' }, bad);
+  }
+});
+
+test('consentJson', () => {
+  assert.equal(consentJson({ company: '' }), '{"capture":"window","guided":false}');
+  assert.deepEqual(parse(consentJson({ company: 'Acme', capture: 'screen', guided: true, brandColor: '#112233', logoPngBase64: 'iVBORw0KGgo=' })), {
+    capture: 'screen',
+    guided: true,
+    company: 'Acme',
+    brand_color: '#112233',
+    logo_png_base64: 'iVBORw0KGgo=',
+  });
+  assert.throws(() => consentJson({ company: 'Acme', brandColor: 'red' }), { code: 'bad_config' });
 });

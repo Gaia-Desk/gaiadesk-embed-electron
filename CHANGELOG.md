@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+- libgaiadesk_embed 0.2.0: white-label branding. `EmbedOptions.brandColor` (`#RRGGBB`) and
+  `EmbedOptions.logoPngBase64` (a PNG, at most 256 KiB) put your colour and logo on the
+  "Sharing with <company>" indicator; `GaiaDeskEmbed.requestConsent({ company, …, brandColor,
+  logoPngBase64 })` shows the consent dialog in your look. A colour that is not `#RRGGBB` throws
+  `EmbedError` (`bad_config`) before the native call; a colour or logo the library refuses throws
+  `bad_config` instead of reading as a decline. `consentJson(options)` shows the dialog's JSON.
+- No customer-visible text names GaiaDesk any more (connect errors, the Linux indicator).
+
 ## 0.1.0
 
 The first release: GaiaDesk's built-in help desk for Electron and Node desktop apps, over the

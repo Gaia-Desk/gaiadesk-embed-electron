@@ -25,6 +25,12 @@ export interface NativeBinding {
   buildInfo(): string;
   /** 1 agreed, 0 declined, -1 no native dialog here, -2 wrong thread. */
   showConsent(company: string, capture: string, guided: boolean): number;
+  /**
+   * `gd_embed_show_consent_ex`: the branded dialog, same return values.
+   * Throws `"bad_config: …"` for options the library refuses. Optional: an
+   * addon without it gets the plain `showConsent` dialog.
+   */
+  showConsentEx?(optionsJson: string): number;
   NativeEmbed: {
     /** Throws an Error whose message is `"<code>: <message>"`. */
     start(configJson: string, onEvent: (eventJson: string) => void): NativeEmbedHandle;
