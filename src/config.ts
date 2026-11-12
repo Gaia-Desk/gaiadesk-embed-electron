@@ -1,6 +1,7 @@
 // EmbedOptions → the JSON `gd_embed_start` takes. Pure. The library checks
 // every value itself (and refuses with a code); this only spells it right.
 
+import type { ConsentReceipt } from './consent';
 import type { Rect } from './electron';
 import { EmbedError } from './errors';
 
@@ -65,6 +66,17 @@ export interface EmbedOptions {
    * Restored while it fits on a screen. Needs 0.3.0.
    */
   indicatorOrigin?: { x: number; y: number };
+  /**
+   * An accepted decision's `consent_token` (`consent()` or `<gaiadesk-consent>`
+   * with `consentBridge`, the recommended way to ask): your user's yes, which
+   * the library checks. Needs libgaiadesk_embed 0.4.0.
+   */
+  consentToken?: string;
+  /**
+   * That decision's `receipt`: sent with the join (stored on the session).
+   * `capture` and `guided` follow what your customer chose. Needs 0.4.0.
+   */
+  consentReceipt?: ConsentReceipt;
 }
 
 /** The consent dialog's question, in your look (`requestConsent(options)`). */
@@ -92,16 +104,22 @@ export interface Consent {
 
 /**
  * The config JSON: snake_case keys, `capture` and `guided` always present
- * (defaults `"window"` and `false`), every other key only when set, and `consent_granted` true only when the answer is literally `true`.
+ * (defaults `"window"` and `false`; with a receipt, its choices: the capture
+ * chosen, guided only if chosen too), every other key only when set, and
+ * `consent_granted` true only when the answer is literally `true` or a
+ * consent token or receipt is given (the library checks those).
  */
 export function configJson(options: EmbedOptions, consent: Consent | undefined): string {
+  const chosen = options.consentReceipt?.choices;
   const o: Record<string, unknown> = {
     embed_token: options.embedToken,
-    consent_granted: consent?.consentGranted === true,
+    consent_granted: consent?.consentGranted === true || !!options.consentToken || !!options.consentReceipt,
     company: options.company,
-    capture: options.capture ?? 'window',
-    guided: options.guided === true,
+    capture: chosen?.capture ?? options.capture ?? 'window',
+    guided: options.guided === true && (chosen ? chosen.guided === true : true),
   };
+  if (options.consentToken) o.consent_token = options.consentToken;
+  if (options.consentReceipt) o.consent_receipt = options.consentReceipt;
   if (options.server !== undefined) o.server = options.server;
   if (options.windowId !== undefined) o.window_id = options.windowId;
   if (options.fps !== undefined) o.fps = options.fps;

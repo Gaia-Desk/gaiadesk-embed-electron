@@ -4,7 +4,7 @@
 import { before, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { BINARY_ENV, EmbedError, GaiaDeskEmbed, useBinding } from '../dist/index';
+import { BINARY_ENV, EmbedError, GaiaDeskEmbed, recordConsent, useBinding } from '../dist/index';
 import type { EmbedOptions } from '../dist/index';
 
 const skip = process.env[BINARY_ENV] ? false : `set ${BINARY_ENV} to a gaiadesk-embed .node to run the live tests`;
@@ -54,4 +54,27 @@ test('live: a bad server → bad_server', { skip }, () => {
 
 test('live: fps out of range → bad_config', { skip }, () => {
   assert.equal(refused({ embedToken: TOKEN, company: 'Acme', server: 'https://gaiadesk.invalid', fps: 60 }, true).code, 'bad_config');
+});
+
+test('live: recordConsent makes an embedded receipt (0.4.0; never the dialog, no network)', { skip }, (t) => {
+  let d;
+  try {
+    d = recordConsent({
+      decision: 'declined',
+      choices: { guided: false, share_logs: false, capture: 'window' },
+      wording: { title: 'Share with Acme?' },
+      wording_version: 'acme-1',
+      locale: 'en',
+      company: 'Acme',
+      capture: 'window',
+      app_version: null,
+    });
+  } catch (e) {
+    if (e instanceof EmbedError && e.code === 'unsupported') return t.skip('an older binary');
+    throw e;
+  }
+  assert.equal(d.decision, 'declined');
+  assert.equal(d.receipt?.surface, 'embedded');
+  assert.match(d.receipt?.id ?? '', /^cr_/);
+  assert.equal(d.consent_token, undefined);
 });

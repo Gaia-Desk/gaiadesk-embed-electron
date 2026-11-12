@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+- libgaiadesk_embed 0.4.0: the consent step (GD-31). `consent(options, onEvent)` (the library's
+  dialog: live preview, your customer's choices, who is waiting, localized, themed, timeout),
+  `preview`, `recordConsent`, `waitInfo`, and `consentBridge` / `createConsentBridge(session)` for
+  the `@gaiadesk/consent` web component (main or preload side). Types `ConsentStepOptions`,
+  `Decision`, `ConsentReceipt`, `Choices`, `ConsentEvent`, `ConsentBridge`, …
+- `EmbedOptions.consentToken` and `consentReceipt`: start with the consent step's decision
+  (`start`'s consent argument is now optional); `capture` and `guided` follow your customer's
+  choices.
+- The `waiting` state carries `choices`; `ended` reasons `customer_declined` and `consent_timeout`.
+- An older binary (without the consent step) throws `unsupported` from the new functions.
+
 ## 0.3.0
 
 - libgaiadesk_embed 0.3.0: the indicator and the consent dialog attach to the window that asked.

@@ -13,7 +13,9 @@ only**, while it is in front.
 
 - TypeScript, typed events, no runtime dependencies besides the prebuilt native library for your
   platform.
-- The library's own consent dialog (macOS, Windows), or yours.
+- A built-in consent step: a live preview of what support will see, your customer's choices, who
+  is waiting, localized, with a stored receipt; in your page (`<gaiadesk-consent>` +
+  `consentBridge`) or as the library's own dialog.
 - A visible **"Sharing with Acme"** indicator, owned by the library, for as long as anything is
   shared.
 - Only your app's window by default. Rects you mask (card numbers, balances) are **painted out of
@@ -81,10 +83,71 @@ async function getHelp(win: BrowserWindow, embedToken: string) {
 `examples/electron-help-desk` is a complete app ("Acme Desk"): a masked card number, a Buy
 button, a token field and Get help.
 
+## The consent step (recommended)
+
+Ask with GaiaDesk's consent step rather than `requestConsent` + `consentGranted: true` or a dialog
+of your own. It shows your customer a **live preview** of exactly what support will see (masked
+rects blacked out), lets them **choose** (view only or click-and-type, app logs, this window or the
+screen), says **who is waiting** and for how long, is **localized** (14 languages, right to left
+included) and themed to your app, and leaves a **receipt** (when, which words — version and hash —,
+what was chosen, the OS user and app version) that is stored on the session and shown in the
+console. A decline or timeout ends the waiting request at once (`customer_declined` /
+`consent_timeout`). Needs the 0.4.0 binaries (libgaiadesk_embed 0.4.0).
+
+**In your page** (the usual choice in Electron): the
+[`@gaiadesk/consent`](https://www.npmjs.com/package/@gaiadesk/consent) web component, with this
+package's `consentBridge` exposed from the preload script (the native library takes the preview and
+makes the receipt; the preload needs `sandbox: false` to load it):
+
+```ts
+// preload.ts
+import { contextBridge } from "electron";
+import { consentBridge } from "@gaiadesk/embed-native";
+contextBridge.exposeInMainWorld("gaiadeskConsent", consentBridge);
+
+// renderer.ts
+import "@gaiadesk/consent";
+const el = document.body.appendChild(document.createElement("gaiadesk-consent"));
+el.bridge = (window as any).gaiadeskConsent;
+const d = await el.open({ company: "Acme", guided: true, choices: { offer_logs: true } });
+el.remove();
+if (d.decision === "accepted") await (window as any).acme.startHelp(d); // to your main process
+
+// main.ts
+GaiaDeskEmbed.start({ embedToken, company: "Acme", guided: true, consentToken: d.consent_token, consentReceipt: d.receipt });
+```
+
+`consentBridge` posts an accepted receipt with `start`. When your backend already created the
+session, expose `createConsentBridge({ embedToken, sessionId })` instead: it also shows who is
+waiting, and every receipt (a decline too) is posted at once.
+
+**The library's dialog** (main process; macOS and Windows, and X11 on Linux), with the same options:
+
+```ts
+import { consent, GaiaDeskEmbed, parentWindowOf } from "@gaiadesk/embed-native";
+
+const d = consent({ company: "Acme", guided: true, theme: { accent: "#5b4cf0" }, timeout_seconds: 120,
+                    parent_window: parentWindowOf(win) }, (e) => track(e.type));
+if (d.decision === "accepted")
+  GaiaDeskEmbed.start({ embedToken, company: "Acme", guided: true, consentToken: d.consent_token, consentReceipt: d.receipt });
+// "unavailable": no dialog on this system: use <gaiadesk-consent>.
+```
+
+The options (`ConsentStepOptions`) are the library's (snake_case, every key optional), the same
+object the web component takes: `company`, `capture`, `guided`, `masked`, `brand_color`,
+`logo_png_base64`, `parent_window`, `theme` (`appearance`, `background`, `surface`, `text`,
+`accent`, `radius`, `font_family`, `button_style`), `locale`, `wording` (per-key overrides),
+`wording_version`, `choices` (`offer_guided`, `offer_logs`, `offer_capture`), `privacy_url`,
+`terms_url`, `timeout_seconds`, `preview`, `server` / `embed_token` / `session_id` (then the library
+shows who is waiting and posts the receipt), `app_version`, `window_id`, `masks` (as `start`'s). The
+decision: `{ decision: "accepted" | "declined" | "timeout" | "unavailable", choices, consent_token,
+receipt }`. With a receipt, `start`'s `capture` and `guided` follow your customer's choices.
+
 ## Consent is required
 
-`start` refuses (`EmbedError` with code `consent_required`) unless `consentGranted` is literally
-`true`, and that must be your user's answer to a consent dialog: `GaiaDeskEmbed.requestConsent`
+`start` refuses (`EmbedError` with code `consent_required`) without the consent step's
+`consentToken` / `consentReceipt` (above) or `consentGranted` literally `true`, and that must be
+your user's answer to a consent dialog: `GaiaDeskEmbed.requestConsent`
 (the library's own, modal, on macOS and Windows) or your own. `requestConsent` returns `true` or
 `false`, or `null` where the platform has no native dialog (Linux): show your own, e.g. Electron's
 `dialog.showMessageBox`. Say who will see what, and whether they can act.
@@ -188,7 +251,12 @@ pass it as `parentWindow` directly.
 
 | | |
 |---|---|
-| `GaiaDeskEmbed.start(options, { consentGranted }, onEvent?)` | start sharing; throws `EmbedError` (`.code`) |
+| `GaiaDeskEmbed.start(options, { consentGranted }?, onEvent?)` | start sharing; throws `EmbedError` (`.code`) |
+| `consent(options?, onEvent?)` | the consent step's dialog → the decision (see The consent step); events `consent_shown` `{ locale, wording_version }`, `consent_accepted` `{ choices }`, `consent_declined` `{ reason }` |
+| `preview(request?)` | `{ png_base64, width, height, masked_count }`: one frame of what support would see (`capture_unavailable` without permission) |
+| `recordConsent(input)` | your own UI's answer made a receipt (`surface: "embedded"`) → the decision |
+| `consentBridge`, `createConsentBridge(session?)` | the `<gaiadesk-consent>` bridge (`preview`, `recordConsent`; with a session also `waitInfo`) |
+| `waitInfo({ embedToken, sessionId, server? })` | `{ team_name, team_avatar_url, estimated_wait_seconds }` |
 | `help.on(listener)` | listen to events; returns an unsubscribe function |
 | `help.stop()` | end the session (safe to call again); `ended` follows with `app_stopped` (`customer_cancelled` before any agent was admitted) |
 | `help.setMaskedRects(rects)` | replace the masked rects (`{ x, y, w, h }[]`) |
@@ -216,22 +284,23 @@ pass it as `parentWindow` directly.
 | `parentWindow` | the window that asked (`parentWindowOf(win)`); default: your app's focused window |
 | `indicatorPosition` | `"top-left"`, `"top-right"` (default), `"bottom-left"` or `"bottom-right"` |
 | `indicatorOrigin` | `{ x, y }` from an `indicator_moved` event you kept: restored while it fits on a screen |
+| `consentToken`, `consentReceipt` | an accepted decision's `consent_token` and `receipt` (see The consent step) |
 
 | Event | |
 |---|---|
-| `state` | `{ state }`: `starting`, `waiting`, `connected`, `ended` |
+| `state` | `{ state, choices? }`: `starting`, `waiting` (with `choices`: what the session runs with), `connected`, `ended` |
 | `code` | `{ code, sessionId, mode, expiresAt }`: the session is up; `code` is the support code your customer reads to the agent |
 | `joined` / `left` | `{ agent }` (the agent's email, or `null`) / `{}` |
 | `control` | `{ allowed }`: guided input paused (`false`) or allowed again |
 | `action` | `{ action, applied, reason }`: an agent's request and what became of it |
 | `indicator_moved` | `{ x, y }`: your customer dragged the indicator; keep it for `indicatorOrigin` |
 | `error` | `{ code, message }` |
-| `ended` | `{ reason }`: `stopped`, `app_stopped`, `customer_cancelled`, `disconnected`, `expired` or `error`. Always last, exactly once |
+| `ended` | `{ reason }`: `stopped`, `app_stopped`, `customer_cancelled`, `customer_declined` / `consent_timeout` (the consent receipt said no, or the dialog timed out), `disconnected`, `expired` or `error`. Always last, exactly once |
 
 Events arrive on the JS thread, in order. Types this version does not know are ignored.
 
-Refusal codes include `consent_required`, `bad_token`, `bad_server`, `bad_config` and
-`bad_rects`.
+Refusal codes include `consent_required`, `bad_token`, `bad_server`, `bad_config`, `bad_rects`,
+`wrong_thread`, `capture_unavailable` and `unsupported` (the consent step on a binary before 0.4.0).
 
 ### Loading the native library
 

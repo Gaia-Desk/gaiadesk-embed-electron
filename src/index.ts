@@ -21,6 +21,21 @@ import type { NativeEmbedHandle } from './native';
 import type { Rect } from './electron';
 
 export { configJson, consentJson } from './config';
+export { consent, consentBridge, createConsentBridge, parseConsentEvent, preview, recordConsent, waitInfo } from './consent';
+export type {
+  BridgeSession,
+  Choices,
+  ConsentBridge,
+  ConsentEvent,
+  ConsentReceipt,
+  ConsentStepOptions,
+  ConsentTheme,
+  Decision,
+  PreviewFrame,
+  PreviewRequest,
+  RecordConsentInput,
+  WaitInfo,
+} from './consent';
 export type { Capture, Consent, ConsentOptions, EmbedOptions, IndicatorPosition } from './config';
 export { EmbedError } from './errors';
 export { parseEvent } from './events';
@@ -60,13 +75,14 @@ export class GaiaDeskEmbed {
   }
 
   /**
-   * Start sharing. `consent.consentGranted` must be your user's answer to a
-   * consent dialog (`requestConsent`, or your own): the library refuses
-   * without it. Events are delivered on the JS thread, in order.
+   * Start sharing, after your user agreed: pass the consent step's
+   * `consentToken` + `consentReceipt` in `options` (recommended: `consent()`
+   * or `<gaiadesk-consent>`), or `consent.consentGranted` as your user's answer
+   * to `requestConsent` or your own dialog. The library refuses without one. Events are delivered on the JS thread, in order.
    *
    * @throws EmbedError when refused (`consent_required`, `bad_token`, …).
    */
-  static start(options: EmbedOptions, consent: Consent, onEvent?: EmbedListener): GaiaDeskEmbed {
+  static start(options: EmbedOptions, consent?: Consent, onEvent?: EmbedListener): GaiaDeskEmbed {
     const json = configJson(options, consent);
     const embed = new GaiaDeskEmbed();
     if (onEvent) embed.listeners.add(onEvent);

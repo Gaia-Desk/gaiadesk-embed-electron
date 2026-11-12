@@ -1,13 +1,27 @@
 // What the library tells the app, one JSON object per event, as typed
 // values. `ended` is always the last event, exactly once.
 
+import type { Choices } from './consent';
+
 export type EmbedState = 'starting' | 'waiting' | 'connected' | 'ended';
 export type SessionMode = 'view' | 'cobrowse';
-export type EndReason = 'stopped' | 'app_stopped' | 'customer_cancelled' | 'disconnected' | 'expired' | 'error';
+/**
+ * `customer_declined` / `consent_timeout`: the session's consent receipt said
+ * no, or the dialog timed out; the request left the queue.
+ */
+export type EndReason =
+  | 'stopped'
+  | 'app_stopped'
+  | 'customer_cancelled'
+  | 'customer_declined'
+  | 'consent_timeout'
+  | 'disconnected'
+  | 'expired'
+  | 'error';
 
 export type EmbedEvent =
-  /** The session's progress. */
-  | { type: 'state'; state: EmbedState }
+  /** The session's progress; `waiting` carries what the session runs with (your customer's choices). */
+  | { type: 'state'; state: EmbedState; choices?: Choices }
   /** The session is up: read `code` to the support agent. `expiresAt` is Unix seconds. */
   | { type: 'code'; code: string; sessionId: string; mode: SessionMode; expiresAt: number | null }
   /** A support agent joined (their email, when known). */
@@ -27,7 +41,7 @@ export type EmbedEvent =
 
 const STATES: readonly string[] = ['starting', 'waiting', 'connected', 'ended'];
 const MODES: readonly string[] = ['view', 'cobrowse'];
-const REASONS: readonly string[] = ['stopped', 'app_stopped', 'customer_cancelled', 'disconnected', 'expired', 'error'];
+const REASONS: readonly string[] = ['stopped', 'app_stopped', 'customer_cancelled', 'customer_declined', 'consent_timeout', 'disconnected', 'expired', 'error'];
 
 const str = (v: unknown): v is string => typeof v === 'string';
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -48,8 +62,11 @@ export function parseEvent(json: string): EmbedEvent | null {
   if (typeof o !== 'object' || o === null || Array.isArray(o)) return null;
   const e = o as Record<string, unknown>;
   switch (e.type) {
-    case 'state':
-      return str(e.state) && STATES.includes(e.state) ? { type: 'state', state: e.state as EmbedState } : null;
+    case 'state': {
+      if (!str(e.state) || !STATES.includes(e.state)) return null;
+      const c = e.choices as Choices | undefined;
+      return c && typeof c === 'object' ? { type: 'state', state: e.state as EmbedState, choices: c } : { type: 'state', state: e.state as EmbedState };
+    }
     case 'code': {
       if (!str(e.code) || !str(e.session_id) || !str(e.mode) || !MODES.includes(e.mode)) return null;
       const expiresAt = typeof e.expires_at === 'number' && Number.isFinite(e.expires_at) ? e.expires_at : null;
