@@ -96,14 +96,25 @@ console. A decline or timeout ends the waiting request at once (`customer_declin
 
 **In your page** (the usual choice in Electron): the
 [`@gaiadesk/consent`](https://www.npmjs.com/package/@gaiadesk/consent) web component, with this
-package's `consentBridge` exposed from the preload script (the native library takes the preview and
-makes the receipt; the preload needs `sandbox: false` to load it):
+package's `consentBridge` running in the **main process** (the native library takes the preview and
+makes the receipt) and reached over IPC, so the renderer and preload keep Electron's sandbox on:
 
 ```ts
-// preload.ts
-import { contextBridge } from "electron";
-import { consentBridge } from "@gaiadesk/embed-native";
-contextBridge.exposeInMainWorld("gaiadeskConsent", consentBridge);
+// main.ts
+import { ipcMain } from "electron";
+import { consentBridge, GaiaDeskEmbed } from "@gaiadesk/embed-native";
+ipcMain.handle("gaiadesk:preview", (_e, o) => consentBridge.preview!(o));
+ipcMain.handle("gaiadesk:record-consent", (_e, input) => consentBridge.recordConsent(input));
+ipcMain.handle("gaiadesk:start-help", (_e, d) =>
+  GaiaDeskEmbed.start({ embedToken, company: "Acme", guided: true, consentToken: d.consent_token, consentReceipt: d.receipt }));
+
+// preload.ts (sandboxed)
+import { contextBridge, ipcRenderer } from "electron";
+contextBridge.exposeInMainWorld("gaiadeskConsent", {
+  preview: (o: unknown) => ipcRenderer.invoke("gaiadesk:preview", o),
+  recordConsent: (input: unknown) => ipcRenderer.invoke("gaiadesk:record-consent", input),
+});
+contextBridge.exposeInMainWorld("acme", { startHelp: (d: unknown) => ipcRenderer.invoke("gaiadesk:start-help", d) });
 
 // renderer.ts
 import "@gaiadesk/consent";
@@ -111,10 +122,7 @@ const el = document.body.appendChild(document.createElement("gaiadesk-consent"))
 el.bridge = (window as any).gaiadeskConsent;
 const d = await el.open({ company: "Acme", guided: true, choices: { offer_logs: true } });
 el.remove();
-if (d.decision === "accepted") await (window as any).acme.startHelp(d); // to your main process
-
-// main.ts
-GaiaDeskEmbed.start({ embedToken, company: "Acme", guided: true, consentToken: d.consent_token, consentReceipt: d.receipt });
+if (d.decision === "accepted") await (window as any).acme.startHelp(d);
 ```
 
 `consentBridge` posts an accepted receipt with `start`. When your backend already created the
