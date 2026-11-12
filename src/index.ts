@@ -21,15 +21,15 @@ import type { NativeEmbedHandle } from './native';
 import type { Rect } from './electron';
 
 export { configJson, consentJson } from './config';
-export type { Capture, Consent, ConsentOptions, EmbedOptions } from './config';
+export type { Capture, Consent, ConsentOptions, EmbedOptions, IndicatorPosition } from './config';
 export { EmbedError } from './errors';
 export { parseEvent } from './events';
 export type { EmbedEvent, EmbedState, EndReason, SessionMode } from './events';
 export { BINARY_ENV, TRIPLES, binaryName, currentTriple, loadBinding, packageName, useBinding } from './load';
 export type { LoadEnv, Triple } from './load';
 export type { NativeBinding, NativeEmbedHandle, NativeRect } from './native';
-export { frameSizeOf, maskRectsFromContent, unitsPerDip, windowIdOf } from './electron';
-export type { BoxLike, FramedWindow, MediaSourceWindow, Rect } from './electron';
+export { frameSizeOf, maskRectsFromContent, parentWindowOf, unitsPerDip, windowIdOf } from './electron';
+export type { BoxLike, FramedWindow, MediaSourceWindow, NativeHandleWindow, Rect } from './electron';
 
 export type EmbedListener = (event: EmbedEvent) => void;
 
@@ -86,7 +86,8 @@ export class GaiaDeskEmbed {
    * your own, e.g. Electron's `dialog.showMessageBox`.
    *
    * Pass `ConsentOptions` for the dialog in your look (`brandColor`,
-   * `logoPngBase64`; libgaiadesk_embed 0.2.0).
+   * `logoPngBase64`; libgaiadesk_embed 0.2.0), or with `masked` and
+   * `parentWindow` (0.3.0).
    *
    * @throws EmbedError `bad_config` for a colour or logo that is refused
    *   (never read as a decline), `wrong_thread`.
@@ -95,13 +96,13 @@ export class GaiaDeskEmbed {
   static requestConsent(company: string, capture?: Capture, guided?: boolean): boolean | null;
   static requestConsent(companyOrOptions: string | ConsentOptions, capture: Capture = 'window', guided = false): boolean | null {
     const o: ConsentOptions = typeof companyOrOptions === 'string' ? { company: companyOrOptions, capture, guided } : companyOrOptions;
-    const branded = o.brandColor !== undefined || !!o.logoPngBase64;
+    const extended = o.brandColor !== undefined || !!o.logoPngBase64 || o.masked === true || o.parentWindow !== undefined;
     const json = consentJson(o); // validates the colour first
     const b = binding();
     let rc: number;
     try {
-      // shortcut: an addon without showConsentEx shows the plain dialog (brand ignored); drop the fallback once every addon has it.
-      rc = branded && b.showConsentEx ? b.showConsentEx(json) : b.showConsent(o.company, o.capture ?? 'window', o.guided === true);
+      // shortcut: an addon without showConsentEx shows the plain dialog (brand, masked, parent ignored); drop the fallback once every addon has it.
+      rc = extended && b.showConsentEx ? b.showConsentEx(json) : b.showConsent(o.company, o.capture ?? 'window', o.guided === true);
     } catch (e) {
       throw EmbedError.from(e);
     }
@@ -141,7 +142,7 @@ export class GaiaDeskEmbed {
     };
   }
 
-  /** End the session. Safe to call more than once; `ended` follows. */
+  /** End the session. Safe to call more than once; `ended` follows (`customer_cancelled` before any agent was admitted). */
   stop(): void {
     const n = this.native;
     this.native = null;

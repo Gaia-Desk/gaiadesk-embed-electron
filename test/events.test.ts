@@ -61,6 +61,12 @@ test('action', () => {
   assert.equal(parseEvent('{"type":"action","action":"click"}'), null);
 });
 
+test('indicator_moved', () => {
+  assert.deepEqual(parseEvent('{"type":"indicator_moved","x":812.5,"y":-40}'), { type: 'indicator_moved', x: 812.5, y: -40 });
+  assert.equal(parseEvent('{"type":"indicator_moved","x":1}'), null);
+  assert.equal(parseEvent('{"type":"indicator_moved","x":"1","y":2}'), null);
+});
+
 test('error', () => {
   assert.deepEqual(parseEvent('{"type":"error","code":"capture_failed","message":"no window"}'), {
     type: 'error',
@@ -71,7 +77,7 @@ test('error', () => {
 });
 
 test('ended: every reason, and never lost', () => {
-  for (const r of ['stopped', 'app_stopped', 'disconnected', 'expired', 'error']) {
+  for (const r of ['stopped', 'app_stopped', 'customer_cancelled', 'disconnected', 'expired', 'error']) {
     assert.deepEqual(parseEvent(JSON.stringify({ type: 'ended', reason: r })), { type: 'ended', reason: r });
   }
   assert.deepEqual(parseEvent('{"type":"ended","reason":"meteor"}'), { type: 'ended', reason: 'error' });

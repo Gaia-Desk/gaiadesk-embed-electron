@@ -50,6 +50,28 @@ export function windowIdOf(win: MediaSourceWindow): number {
   return id;
 }
 
+/** What `parentWindowOf` needs of a BrowserWindow. */
+export interface NativeHandleWindow {
+  getNativeWindowHandle(): Uint8Array;
+}
+
+/**
+ * A BrowserWindow's handle for `parentWindow`, from
+ * `win.getNativeWindowHandle()`: the HWND on Windows. `undefined` elsewhere:
+ * on macOS that Buffer holds the window's NSView*, and the library takes only
+ * an NSWindow* (`[view window]`, which plain JS cannot reach); it then uses the
+ * app's key window, which is the one your user just clicked. Linux has no
+ * calling-window placement.
+ */
+export function parentWindowOf(win: NativeHandleWindow, platform: string = process.platform): number | undefined {
+  if (platform !== 'win32') return undefined;
+  const b = win.getNativeWindowHandle();
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const h = b.byteLength === 8 ? Number(v.getBigUint64(0, true)) : b.byteLength === 4 ? v.getUint32(0, true) : NaN;
+  if (!Number.isSafeInteger(h) || h <= 0) throw new Error(`parentWindowOf: not a window handle (${b.byteLength} bytes)`);
+  return h;
+}
+
 /** The units multiplier for this platform: the scale factor on Windows and Linux, 1 on macOS. */
 export function unitsPerDip(scaleFactor: number, platform: string = process.platform): number {
   if (platform === 'darwin') return 1;

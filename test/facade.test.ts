@@ -50,7 +50,7 @@ function fake(): Fake {
       }
     },
     binding: {
-      buildInfo: () => '{"version":"0.2.0","test_source":false,"codec":"h264","os":"macos","arch":"aarch64"}',
+      buildInfo: () => '{"version":"0.3.0","test_source":false,"codec":"h264","os":"macos","arch":"aarch64"}',
       showConsent: (...args: unknown[]) => {
         f.consent.args.push(args);
         return f.consent.rc;
@@ -247,7 +247,47 @@ test('start passes the brand', () => {
   assert.equal(f.configs.length, 1);
 });
 
+test('start passes the 0.3.0 placement options; indicator_moved and customer_cancelled arrive typed', async () => {
+  const seen: EmbedEvent[] = [];
+  const help = GaiaDeskEmbed.start(
+    { embedToken: TOKEN, company: 'Acme', parentWindow: 140230000, indicatorPosition: 'bottom-left', indicatorOrigin: { x: 10.5, y: -20 } },
+    { consentGranted: true },
+    (e) => seen.push(e),
+  );
+  assert.equal(f.configs[0].parent_window, 140230000);
+  assert.equal(f.configs[0].indicator_position, 'bottom-left');
+  assert.deepEqual(f.configs[0].indicator_origin, { x: 10.5, y: -20 });
+  await tick();
+  await f.emit({ type: 'indicator_moved', x: 812, y: 40.5 });
+  await f.emit({ type: 'indicator_moved', x: '812', y: 40 });
+  await f.emit({ type: 'ended', reason: 'customer_cancelled' });
+  assert.deepEqual(seen.slice(1), [
+    { type: 'indicator_moved', x: 812, y: 40.5 },
+    { type: 'ended', reason: 'customer_cancelled' },
+  ]);
+  assert.equal(await help.ended, 'customer_cancelled');
+  // None of them unless set.
+  GaiaDeskEmbed.start({ embedToken: TOKEN, company: 'Acme' }, { consentGranted: true }).stop();
+  assert.ok(!['parent_window', 'indicator_position', 'indicator_origin'].some((k) => k in f.configs[1]));
+});
+
+test('requestConsent: masked or parentWindow alone takes the extended dialog', () => {
+  const sent: string[] = [];
+  f.binding.showConsentEx = (json) => {
+    sent.push(json);
+    return 1;
+  };
+  assert.equal(GaiaDeskEmbed.requestConsent({ company: 'Acme', masked: true }), true);
+  assert.equal(GaiaDeskEmbed.requestConsent({ company: 'Acme', parentWindow: 5 }), true);
+  assert.equal(GaiaDeskEmbed.requestConsent({ company: 'Acme', masked: false }), true);
+  assert.deepEqual(sent.map((j) => JSON.parse(j)), [
+    { capture: 'window', guided: false, company: 'Acme', masked: true },
+    { capture: 'window', guided: false, company: 'Acme', parent_window: 5 },
+  ]);
+  assert.equal(f.consent.args.length, 1, 'masked: false is the plain dialog');
+});
+
 test('buildInfo is typed', () => {
-  assert.deepEqual(GaiaDeskEmbed.buildInfo(), { version: '0.2.0', testSource: false, codec: 'h264', os: 'macos', arch: 'aarch64' });
+  assert.deepEqual(GaiaDeskEmbed.buildInfo(), { version: '0.3.0', testSource: false, codec: 'h264', os: 'macos', arch: 'aarch64' });
   assert.match(GaiaDeskEmbed.buildInfoJson(), /"test_source":false/);
 });

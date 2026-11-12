@@ -162,7 +162,27 @@ again) on the indicator; you can too, with `setPaused(true)`. Every request is r
 
 While anything is shared the library shows its own **"Sharing with <company>"** panel with **Stop
 sharing** (and, in guided sessions, Pause / Allow control). Frames are sent only while it is up.
-Stop ends everything; you get `ended` with reason `stopped`.
+Stop ends everything; you get `ended` with reason `stopped`. Cancel on the indicator (or `stop()`)
+before any agent was admitted ends with `customer_cancelled`, and the request leaves your support
+team's queue at once.
+
+Placement (libgaiadesk_embed 0.3.0): the indicator starts top right, clear of the window that
+asked. `indicatorPosition` picks another corner; when your customer drags it you get
+`indicator_moved` `{ x, y }`: keep it (the library writes nothing to disk) and pass it back as
+`indicatorOrigin` next time. `parentWindow` names the window that asked (the consent dialog
+becomes a sheet on it on macOS, owned by it on Windows):
+
+```ts
+const parentWindow = parentWindowOf(win); // the HWND on Windows; undefined on macOS and Linux
+GaiaDeskEmbed.requestConsent({ company: "Acme", masked: true, parentWindow });
+GaiaDeskEmbed.start({ embedToken, company: "Acme", parentWindow, indicatorOrigin: saved }, { consentGranted: true },
+  (e) => { if (e.type === "indicator_moved") saved = { x: e.x, y: e.y }; });
+```
+
+On macOS `getNativeWindowHandle()` is the window's `NSView*` and the library takes only an
+`NSWindow*`, so `parentWindowOf` returns `undefined` there and the library uses your app's key
+window (the one your user just clicked). If you have the `NSWindow*` from your own native code,
+pass it as `parentWindow` directly.
 
 ## API
 
@@ -170,15 +190,16 @@ Stop ends everything; you get `ended` with reason `stopped`.
 |---|---|
 | `GaiaDeskEmbed.start(options, { consentGranted }, onEvent?)` | start sharing; throws `EmbedError` (`.code`) |
 | `help.on(listener)` | listen to events; returns an unsubscribe function |
-| `help.stop()` | end the session (safe to call again); `ended` follows with `app_stopped` |
+| `help.stop()` | end the session (safe to call again); `ended` follows with `app_stopped` (`customer_cancelled` before any agent was admitted) |
 | `help.setMaskedRects(rects)` | replace the masked rects (`{ x, y, w, h }[]`) |
 | `help.setPaused(paused)` | pause or resume guided input |
 | `help.ended` | a promise of the end reason, resolved exactly once |
 | `GaiaDeskEmbed.requestConsent(company, capture?, guided?)` | `true` / `false`, or `null` with no native dialog |
-| `GaiaDeskEmbed.requestConsent({ company, capture?, guided?, brandColor?, logoPngBase64? })` | the same dialog in your look (see Branding) |
+| `GaiaDeskEmbed.requestConsent({ company, capture?, guided?, brandColor?, logoPngBase64?, masked?, parentWindow? })` | the same dialog in your look (see Branding); `masked` says private fields stay hidden |
 | `GaiaDeskEmbed.buildInfo()` | `{ version, testSource, codec, os, arch }` of the native library |
 | `windowIdOf(win)` | a BrowserWindow's CGWindowID (macOS) / HWND (Windows), for `windowId` |
 | `maskRectsFromContent(win, rects, scaleFactor)` | page rects → mask rects (see Masking) |
+| `parentWindowOf(win)` | a BrowserWindow's HWND (Windows) for `parentWindow`; `undefined` on macOS and Linux (see The indicator) |
 
 | Option | |
 |---|---|
@@ -192,6 +213,9 @@ Stop ends everything; you get `ended` with reason `stopped`.
 | `masks` | rects painted out from the first frame (see Masking) |
 | `brandColor` | `"#RRGGBB"`, the indicator's accent (see Branding) |
 | `logoPngBase64` | a PNG (at most 256 KiB) as base64, shown small on the indicator |
+| `parentWindow` | the window that asked (`parentWindowOf(win)`); default: your app's focused window |
+| `indicatorPosition` | `"top-left"`, `"top-right"` (default), `"bottom-left"` or `"bottom-right"` |
+| `indicatorOrigin` | `{ x, y }` from an `indicator_moved` event you kept: restored while it fits on a screen |
 
 | Event | |
 |---|---|
@@ -200,8 +224,9 @@ Stop ends everything; you get `ended` with reason `stopped`.
 | `joined` / `left` | `{ agent }` (the agent's email, or `null`) / `{}` |
 | `control` | `{ allowed }`: guided input paused (`false`) or allowed again |
 | `action` | `{ action, applied, reason }`: an agent's request and what became of it |
+| `indicator_moved` | `{ x, y }`: your customer dragged the indicator; keep it for `indicatorOrigin` |
 | `error` | `{ code, message }` |
-| `ended` | `{ reason }`: `stopped`, `app_stopped`, `disconnected`, `expired` or `error`. Always last, exactly once |
+| `ended` | `{ reason }`: `stopped`, `app_stopped`, `customer_cancelled`, `disconnected`, `expired` or `error`. Always last, exactly once |
 
 Events arrive on the JS thread, in order. Types this version does not know are ignored.
 

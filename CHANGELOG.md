@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+- libgaiadesk_embed 0.3.0: the indicator and the consent dialog attach to the window that asked.
+  `EmbedOptions.parentWindow` and `ConsentOptions.parentWindow` (an HWND, or an `NSWindow*` from
+  your own native code); `parentWindowOf(win)` reads a BrowserWindow's HWND from
+  `getNativeWindowHandle()` on Windows and returns `undefined` on macOS (that handle is an
+  `NSView*`, which the library does not take; it uses the app's key window) and Linux.
+- `EmbedOptions.indicatorPosition` (a corner) and `indicatorOrigin` (`{ x, y }`); the new
+  `indicator_moved` event `{ x, y }` says where your customer dragged it, to keep and pass back.
+- `ConsentOptions.masked`: the dialog says private fields stay hidden.
+- `ended` reason `customer_cancelled`: Cancel on the indicator, or `stop()`, before any agent was
+  admitted.
+
 ## 0.2.0
 
 - libgaiadesk_embed 0.2.0: white-label branding. `EmbedOptions.brandColor` (`#RRGGBB`) and

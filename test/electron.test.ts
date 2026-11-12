@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { frameSizeOf, maskRectsFromContent, unitsPerDip, windowIdOf } from '../dist/index';
+import { frameSizeOf, maskRectsFromContent, parentWindowOf, unitsPerDip, windowIdOf } from '../dist/index';
 import type { BoxLike } from '../dist/index';
 
 test('windowIdOf parses the media source id', () => {
@@ -43,4 +43,15 @@ test('several rects, none, and a nonsense scale factor', () => {
   assert.equal(unitsPerDip(1.25, 'win32'), 1.25);
   assert.equal(unitsPerDip(2, 'darwin'), 1);
   assert.equal(unitsPerDip(2, 'linux'), 2);
+});
+
+test('parentWindowOf: the HWND on Windows; nothing on macOS (an NSView*) or Linux', () => {
+  const handle = (bytes: number[]) => ({ getNativeWindowHandle: () => Buffer.from(bytes) });
+  assert.equal(parentWindowOf(handle([0x34, 0x12, 0x0a, 0, 0, 0, 0, 0]), 'win32'), 0x0a1234);
+  assert.equal(parentWindowOf(handle([0x34, 0x12, 0, 0]), 'win32'), 0x1234);
+  for (const bad of [[0, 0, 0, 0, 0, 0, 0, 0], [1, 2], [0, 0, 0, 0, 0, 0, 0, 0x80]]) {
+    assert.throws(() => parentWindowOf(handle(bad), 'win32'), /not a window handle/, String(bad));
+  }
+  assert.equal(parentWindowOf(handle([1, 0, 0, 0, 0, 0, 0, 0]), 'darwin'), undefined);
+  assert.equal(parentWindowOf(handle([1, 0, 0, 0, 0, 0, 0, 0]), 'linux'), undefined);
 });

@@ -3,7 +3,7 @@
 
 export type EmbedState = 'starting' | 'waiting' | 'connected' | 'ended';
 export type SessionMode = 'view' | 'cobrowse';
-export type EndReason = 'stopped' | 'app_stopped' | 'disconnected' | 'expired' | 'error';
+export type EndReason = 'stopped' | 'app_stopped' | 'customer_cancelled' | 'disconnected' | 'expired' | 'error';
 
 export type EmbedEvent =
   /** The session's progress. */
@@ -18,6 +18,8 @@ export type EmbedEvent =
   | { type: 'control'; allowed: boolean }
   /** An agent's guided-input request, and whether it was applied. */
   | { type: 'action'; action: string; applied: boolean; reason: string | null }
+  /** The customer dragged the indicator: keep `{ x, y }` and pass it back as `indicatorOrigin`. */
+  | { type: 'indicator_moved'; x: number; y: number }
   /** Something went wrong; `ended` follows when it was fatal. */
   | { type: 'error'; code: string; message: string }
   /** The session is over. Always last, exactly once. */
@@ -25,9 +27,10 @@ export type EmbedEvent =
 
 const STATES: readonly string[] = ['starting', 'waiting', 'connected', 'ended'];
 const MODES: readonly string[] = ['view', 'cobrowse'];
-const REASONS: readonly string[] = ['stopped', 'app_stopped', 'disconnected', 'expired', 'error'];
+const REASONS: readonly string[] = ['stopped', 'app_stopped', 'customer_cancelled', 'disconnected', 'expired', 'error'];
 
 const str = (v: unknown): v is string => typeof v === 'string';
+const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const optStr = (v: unknown): string | null | undefined => (v === undefined || v === null ? null : str(v) ? v : undefined);
 
 /**
@@ -65,6 +68,8 @@ export function parseEvent(json: string): EmbedEvent | null {
       if (!str(e.action) || typeof e.applied !== 'boolean' || reason === undefined) return null;
       return { type: 'action', action: e.action, applied: e.applied, reason };
     }
+    case 'indicator_moved':
+      return num(e.x) && num(e.y) ? { type: 'indicator_moved', x: e.x, y: e.y } : null;
     case 'error':
       return str(e.code) && str(e.message) ? { type: 'error', code: e.code, message: e.message } : null;
     case 'ended':

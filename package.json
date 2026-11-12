@@ -1,6 +1,6 @@
 {
   "name": "@gaiadesk/embed-native",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A \"Get help\" button for your Electron or Node desktop app: your customer agrees, and your support team sees the app's window in the GaiaDesk console.",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -23,10 +23,10 @@
     "prepack": "npm run build"
   },
   "optionalDependencies": {
-    "@gaiadesk/embed-native-darwin-arm64": "0.2.0",
-    "@gaiadesk/embed-native-darwin-x64": "0.2.0",
-    "@gaiadesk/embed-native-linux-x64-gnu": "0.2.0",
-    "@gaiadesk/embed-native-win32-x64-msvc": "0.2.0"
+    "@gaiadesk/embed-native-darwin-arm64": "0.3.0",
+    "@gaiadesk/embed-native-darwin-x64": "0.3.0",
+    "@gaiadesk/embed-native-linux-x64-gnu": "0.3.0",
+    "@gaiadesk/embed-native-win32-x64-msvc": "0.3.0"
   },
   "devDependencies": {
     "@types/node": "^18.19.0",

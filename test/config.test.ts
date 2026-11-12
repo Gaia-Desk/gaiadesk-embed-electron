@@ -71,3 +71,12 @@ test('consentJson', () => {
   });
   assert.throws(() => consentJson({ company: 'Acme', brandColor: 'red' }), { code: 'bad_config' });
 });
+
+test('0.3.0 keys: placement on start, masked and parent_window on consent', () => {
+  const o = parse(configJson({ embedToken: TOKEN, company: 'Acme', parentWindow: 9, indicatorPosition: 'top-left', indicatorOrigin: { x: 1, y: 2, z: 3 } as { x: number; y: number } }, { consentGranted: true }));
+  assert.equal(o.parent_window, 9);
+  assert.equal(o.indicator_position, 'top-left');
+  assert.deepEqual(o.indicator_origin, { x: 1, y: 2 }, 'only x and y: the library refuses extra keys');
+  assert.equal(consentJson({ company: 'Acme', masked: false }), '{"capture":"window","guided":false,"company":"Acme"}');
+  assert.deepEqual(parse(consentJson({ company: 'Acme', masked: true, parentWindow: 7 })), { capture: 'window', guided: false, company: 'Acme', masked: true, parent_window: 7 });
+});

@@ -7,6 +7,9 @@ import { EmbedError } from './errors';
 /** What is shared. */
 export type Capture = 'window' | 'app' | 'screen';
 
+/** The screen corner the indicator starts in. */
+export type IndicatorPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 export interface EmbedOptions {
   /** `gdemb_…`, from your backend (`POST /v1/support/sessions`). */
   embedToken: string;
@@ -47,6 +50,21 @@ export interface EmbedOptions {
    * Needs libgaiadesk_embed 0.2.0.
    */
   logoPngBase64?: string;
+  /**
+   * The window that asked (an HWND on Windows, an NSWindow* on macOS; in
+   * Electron: `parentWindowOf(win)`): the indicator stays clear of it.
+   * Ignored unless it is this app's. Default: the app's focused window.
+   * Needs libgaiadesk_embed 0.3.0.
+   */
+  parentWindow?: number;
+  /** The corner the indicator starts in. Default: top right, clear of the calling window. Needs 0.3.0. */
+  indicatorPosition?: IndicatorPosition;
+  /**
+   * Where the customer last dragged the indicator: an `indicator_moved`
+   * event's `{ x, y }` you kept (the library writes nothing to disk).
+   * Restored while it fits on a screen. Needs 0.3.0.
+   */
+  indicatorOrigin?: { x: number; y: number };
 }
 
 /** The consent dialog's question, in your look (`requestConsent(options)`). */
@@ -59,8 +77,12 @@ export interface ConsentOptions {
   guided?: boolean;
   /** `"#RRGGBB"`: the dialog's accent. Default: the platform's own. */
   brandColor?: string;
-  /** A PNG (at most 256 KiB) as base64, shown small on the dialog. */
+  /** A PNG (at most 256 KiB) as base64, shown on the dialog. Default: the app icon. */
   logoPngBase64?: string;
+  /** Say private fields stay hidden (you pass `masks`). Default false. Needs 0.3.0. */
+  masked?: boolean;
+  /** The window that asked (`parentWindowOf(win)`): the dialog is a sheet on it / owned by it. Needs 0.3.0. */
+  parentWindow?: number;
 }
 
 /** Your user's answer to a consent dialog. */
@@ -70,8 +92,7 @@ export interface Consent {
 
 /**
  * The config JSON: snake_case keys, `capture` and `guided` always present
- * (defaults `"window"` and `false`), `server`/`window_id`/`fps`/`masks` only
- * when set, and `consent_granted` true only when the answer is literally `true`.
+ * (defaults `"window"` and `false`), every other key only when set, and `consent_granted` true only when the answer is literally `true`.
  */
 export function configJson(options: EmbedOptions, consent: Consent | undefined): string {
   const o: Record<string, unknown> = {
@@ -86,12 +107,15 @@ export function configJson(options: EmbedOptions, consent: Consent | undefined):
   if (options.fps !== undefined) o.fps = options.fps;
   if (options.masks !== undefined && options.masks.length > 0) o.masks = options.masks.map((r) => ({ x: r.x, y: r.y, w: r.w, h: r.h }));
   addBrand(o, options);
+  if (options.parentWindow !== undefined) o.parent_window = options.parentWindow;
+  if (options.indicatorPosition !== undefined) o.indicator_position = options.indicatorPosition;
+  if (options.indicatorOrigin !== undefined) o.indicator_origin = { x: options.indicatorOrigin.x, y: options.indicatorOrigin.y };
   return JSON.stringify(o);
 }
 
 /**
  * The JSON `gd_embed_show_consent_ex` takes: `capture` and `guided` always
- * present, `company` and the brand keys only when set.
+ * present, `company`, the brand keys, `masked` and `parent_window` only when set.
  *
  * @throws EmbedError `bad_config` for a colour that is not `"#RRGGBB"`.
  */
@@ -99,6 +123,8 @@ export function consentJson(options: ConsentOptions): string {
   const o: Record<string, unknown> = { capture: options.capture ?? 'window', guided: options.guided === true };
   if (options.company) o.company = options.company;
   addBrand(o, options);
+  if (options.masked === true) o.masked = true;
+  if (options.parentWindow !== undefined) o.parent_window = options.parentWindow;
   return JSON.stringify(o);
 }
 
